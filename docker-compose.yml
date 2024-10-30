@@ -1,0 +1,50 @@
+services:
+  ollama:
+    container_name: ollama
+    image: ollama/ollama:latest
+    pull_policy: always
+    tty: true
+    volumes:
+      - ./data/ollama:/root/.ollama
+    restart: unless-stopped
+    network_mode: service:gluetun
+    depends_on:
+      - gluetun
+
+  open-webui:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:main
+    pull_policy: always
+    volumes:
+      - ./data/open-webui:/app/backend/data
+    environment:
+      - 'OLLAMA_BASE_URL=http://localhost:11434'
+      - 'WEBUI_AUTH=false'
+    restart: unless-stopped
+    network_mode: service:gluetun
+    depends_on:
+      - ollama
+      - gluetun
+
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    hostname: gluetun
+    restart: unless-stopped
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 80:8080
+    volumes:
+      - ./data/gluetun:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=USERNAME
+      - OPENVPN_PASSWORD=PASSWORD
+      - SERVER_COUNTRIES=United States
+      - UPDATER_PERIOD=24h
